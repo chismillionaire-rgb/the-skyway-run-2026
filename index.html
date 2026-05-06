@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Skyway Run — May 29–31, 2026</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-primary: #f5f3f0;
+    --bg-card: #ffffff;
+    --bg-card-hover: #f9f7f5;
+    --border: #e2ddd6;
+    --text-primary: #1a1612;
+    --text-secondary: #5c5650;
+    --text-muted: #8a847c;
+    --day1: #c97a3a;
+    --day1-bg: rgba(201,122,58,0.10);
+    --day2: #3d8a6b;
+    --day2-bg: rgba(61,138,107,0.10);
+    --day3: #5a6fc4;
+    --day3-bg: rgba(90,111,196,0.10);
+    --accent-gold: #b08a3e;
+    --accent-red: #b04a4a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    overflow-x: hidden;
+  }
+
+  .hero {
+    position: relative;
+    padding: 48px 24px 32px;
+    text-align: center;
+    background: linear-gradient(180deg, #ede9e3 0%, var(--bg-primary) 100%);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .hero-eyebrow {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
+
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(28px, 5vw, 44px);
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #1a1612 30%, var(--accent-gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .hero-sub {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+  }
+
+  .hero-stats {
+    display: flex;
+    justify-content: center;
+    gap: 28px;
+    flex-wrap: wrap;
+  }
+
+  .hero-stat { text-align: center; }
+
+  .hero-stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .hero-stat-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .day-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px 24px;
+    background: var(--bg-primary);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .day-tab {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .day-tab:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+  .day-tab.active-1 { background: var(--day1-bg); color: var(--day1); border-color: var(--day1); }
+  .day-tab.active-2 { background: var(--day2-bg); color: var(--day2); border-color: var(--day2); }
+  .day-tab.active-3 { background: var(--day3-bg); color: var(--day3); border-color: var(--day3); }
+
+  .map-wrap {
+    position: relative;
+    height: 420px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  #map { width: 100%; height: 100%; z-index: 1; }
+
+  .leaflet-tile-pane { filter: saturate(0.85) brightness(1.02) contrast(1.05); }
+
+  .gmap-link {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    z-index: 999;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  }
+
+  .gmap-link:hover { background: var(--bg-card-hover); transform: translateY(-1px); }
+  .gmap-link svg { flex-shrink: 0; }
+
+  .itinerary-section { padding: 24px 16px 80px; max-width: 680px; margin: 0 auto; }
+
+  .day-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 8px;
+    margin-top: 32px;
+  }
+
+  .day-header:first-child { margin-top: 0; }
+
+  .day-badge {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .day-badge-1 { background: var(--day1-bg); color: var(--day1); }
+  .day-badge-2 { background: var(--day2-bg); color: var(--day2); }
+  .day-badge-3 { background: var(--day3-bg); color: var(--day3); }
+
+  .day-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  .day-meta {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    padding-left: 56px;
+  }
+
+  .stop-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 12px;
+    transition: all 0.2s;
+    cursor: default;
+  }
+
+  .stop-card:hover { background: var(--bg-card-hover); border-color: #ccc5bc; }
+
+  .stop-top { display: flex; align-items: flex-start; gap: 12px; }
+
+  .stop-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .stop-icon-1 { background: var(--day1-bg); }
+  .stop-icon-2 { background: var(--day2-bg); }
+  .stop-icon-3 { background: var(--day3-bg); }
+
+  .stop-info { flex: 1; min-width: 0; }
+
+  .stop-name { font-size: 15px; font-weight: 700; margin-bottom: 2px; line-height: 1.3; }
+
+  .stop-time { font-size: 12px; font-weight: 600; margin-bottom: 6px; }
+  .stop-time-1 { color: var(--day1); }
+  .stop-time-2 { color: var(--day2); }
+  .stop-time-3 { color: var(--day3); }
+
+  .stop-notes { font-size: 13px; color: var(--text-secondary); line-height: 1.55; }
+
+  .stop-links { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+  .stop-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+    padding: 5px 10px;
+    border-radius: 6px;
+    transition: all 0.2s;
+  }
+
+  .stop-link-waze { background: rgba(0,136,204,0.08); color: #0088cc; }
+  .stop-link-waze:hover { background: rgba(0,136,204,0.15); }
+
+  .stop-link-gmaps { background: rgba(52,109,204,0.08); color: #346dcc; }
+  .stop-link-gmaps:hover { background: rgba(52,109,204,0.15); }
+
+  .stop-link-call { background: rgba(61,138,107,0.08); color: var(--day2); }
+  .stop-link-call:hover { background: rgba(61,138,107,0.15); }
+
+  .route-connector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0 6px 17px;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+
+  .route-connector-line { width: 2px; height: 16px; border-radius: 1px; }
+  .route-connector-line-1 { background: var(--day1); opacity: 0.3; }
+  .route-connector-line-2 { background: var(--day2); opacity: 0.3; }
+  .route-connector-line-3 { background: var(--day3); opacity: 0.3; }
+
+  .checklist-section { max-width: 680px; margin: 0 auto; padding: 0 16px 48px; }
+
+  .checklist-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+
+  .checklist-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .checklist-bullet {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .footer {
+    text-align: center;
+    padding: 32px 16px;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+
+  @media (max-width: 480px) {
+    .hero { padding: 32px 16px 24px; }
+    .hero-stats { gap: 16px; }
+    .map-wrap { height: 320px; }
+    .day-tabs { gap: 4px; padding: 12px 8px; }
+    .day-tab { padding: 8px 14px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-eyebrow">Memorial Day Weekend 2026</div>
+  <h1>The Skyway Run</h1>
+  <p class="hero-sub">Bellevue, TN &#x2192; Cherohala Skyway &#x2192; Tapoco Lodge &#x2192; Sequoyah National GC &#x2192; Jacksonville, FL</p>
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <div class="hero-stat-value">880</div>
+      <div class="hero-stat-label">Total Miles</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value">3</div>
+      <div class="hero-stat-label">Days</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value">11.5</div>
+      <div class="hero-stat-label">Scenic Hrs</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value">5,400&#x2032;</div>
+      <div class="hero-stat-label">Peak Elev.</div>
+    </div>
+  </div>
+</div>
+
+<div class="day-tabs">
+  <button class="day-tab active-1" onclick="showDay(1)">Fri &#x2014; Skyway</button>
+  <button class="day-tab" onclick="showDay(2)">Sat &#x2014; Golf</button>
+  <button class="day-tab" onclick="showDay(3)">Sun &#x2014; Home</button>
+</div>
+
+<div class="map-wrap">
+  <div id="map"></div>
+  <a id="gmap-route-link" class="gmap-link" href="#" target="_blank" rel="noopener">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+    Open in Google Maps
+  </a>
+</div>
+
+<div class="itinerary-section" id="itinerary-container"></div>
+
+<div class="checklist-section">
+  <div class="checklist-title">Pre-Trip Checklist</div>
+  <div class="checklist-item"><div class="checklist-bullet"></div><div><strong>Fuel:</strong> Fill in Tellico Plains before the Skyway &#x2014; no gas for 50 miles. Fill in Blue Ridge or Dahlonega on Sunday.</div></div>
+  <div class="checklist-item"><div class="checklist-bullet"></div><div><strong>Offline Maps:</strong> Download Waze/Google Maps for the Robbinsville/Tellico Plains area. Zero cell service on the Skyway.</div></div>
+  <div class="checklist-item"><div class="checklist-bullet"></div><div><strong>Tee Time:</strong> Sequoyah National, 2:00 PM Saturday &#x2014; (828) 497-3000</div></div>
+  <div class="checklist-item"><div class="checklist-bullet"></div><div><strong>Tapoco Lodge:</strong> Confirm 2-night stay (Fri/Sat) &#x2014; (828) 498-2800</div></div>
+  <div class="checklist-item"><div class="checklist-bullet"></div><div><strong>Weather:</strong> Mountain temps at 5,400 ft can be 15&#x2013;20&#xB0;F cooler. Bring a layer for the Skyway overlooks.</div></div>
+  <div class="checklist-item"><div class="checklist-bullet"></div><div><strong>Tires &amp; Sunglasses:</strong> Check pressure before departure. Polarized lenses for late afternoon Skyway light.</div></div>
+</div>
+
+<div class="footer">
+  The Skyway Run &#x2014; May 29&#x2013;31, 2026 &nbsp;&#xB7;&nbsp; ~880 mi &nbsp;&#xB7;&nbsp; 5.5 hrs interstate, 11.5 hrs scenic byway
+</div>
+
+<script>
+const DAYS = [
+  {
+    num: 1,
+    title: "The Skyway Run — Bellevue to Tapoco",
+    meta: "~230 mi · ~4.5 hrs driving + stops · Depart 12:00 PM",
+    color: "#e0915a",
+    gmapUrl: "https://www.google.com/maps/dir/Bellevue,+TN/35.6014,-84.4612/Tellicafe,+128+Bank+St,+Tellico+Plains,+TN/Bald+River+Falls,+TN/Tapoco+Lodge,+14981+Tapoco+Rd,+Robbinsville,+NC/@35.5,-84.2,9z/data=!4m2!4m1!3e0",
+    stops: [
+      { name: "Bellevue, TN", icon: "🏠", time: "12:00 PM", lat: 36.0796, lng: -86.9536,
+        notes: "Depart noon — I-40 East to Sweetwater. Cruise control for ~2.5 hours to reach the good roads.",
+        waze: "https://waze.com/ul?q=Bellevue%20TN" },
+      { name: "Exit 352 — Sweetwater / TN-68 South", icon: "🚣", time: "~2:30 PM", lat: 35.6014, lng: -84.4612,
+        notes: "Leave I-40 here. Beautiful two-lane road through rolling farmland into forested foothills. The drive gets good immediately.",
+        waze: "https://waze.com/ul?ll=35.6014,-84.4612&navigate=yes" },
+      { name: "Tellicafe — Late Lunch", icon: "🍽", time: "~3:15 PM · 45 min", lat: 35.3692, lng: -84.3009,
+        notes: "128 Bank St, Tellico Plains · ⭐ 4.5 · Great Reuben, turkey plates. LAST GAS before the Skyway — fill the tank here.",
+        waze: "https://waze.com/ul?ll=35.3692,-84.3009&navigate=yes", phone: "+1-423-253-2880" },
+      { name: "Bald River Falls", icon: "🌊", time: "~4:15 PM · 15 min", lat: 35.3245, lng: -84.1777,
+        notes: "90-foot single-drop waterfall visible from the road — no hiking required. One of the most accessible major falls in the Southeast.",
+        waze: "https://waze.com/ul?ll=35.3245,-84.1777&navigate=yes" },
+      { name: "Cherohala Skyway — Unicoi Crest", icon: "⛰", time: "~4:45 PM", lat: 35.358, lng: -84.068,
+        notes: "Elevation 5,400 ft. 43-mile National Scenic Byway with 15 overlooks. Golden afternoon light across the Unicoi ridgelines. No services or cell coverage.",
+        waze: "https://waze.com/ul?ll=35.358,-84.068&navigate=yes" },
+      { name: "Tapoco Lodge — Check In & Dinner", icon: "🏨", time: "~6:15 PM", lat: 35.4437, lng: -83.9384,
+        notes: "Dinner at Tapoco Tavern on the river deck. Corn-crusted fried trout, Slick Rock Pizza, Old Fashioned. ⭐ 4.7",
+        waze: "https://waze.com/ul?ll=35.4437,-83.9384&navigate=yes", phone: "+1-828-498-2800" }
+    ]
+  },
+  {
+    num: 2,
+    title: "Nantahala Gorge & Sequoyah National GC",
+    meta: "~120 mi round trip · ~2.5 hrs driving + stops · 2:00 PM tee time",
+    color: "#5aad8e",
+    gmapUrl: "https://www.google.com/maps/dir/Tapoco+Lodge,+Robbinsville,+NC/Deals+Gap+Motorcycle+Resort,+Tapoco+Rd,+Robbinsville,+NC/35.2779,-83.681/Pasqualino's,+25+Everett+St,+Bryson+City,+NC/Sequoyah+National+Golf+Club,+Whittier,+NC/@35.38,-83.6,10z/data=!4m2!4m1!3e0",
+    stops: [
+      { name: "Tapoco Lodge — Breakfast & Depart", icon: "☕", time: "10:30 AM", lat: 35.4437, lng: -83.9384,
+        notes: "Breakfast at the lodge. Fuel up for a scenic morning drive east through the gorge.",
+        waze: "https://waze.com/ul?ll=35.4437,-83.9384&navigate=yes" },
+      { name: "Deals Gap — Tail of the Dragon", icon: "🐉", time: "~10:45 AM · 15 min", lat: 35.4668, lng: -83.9195,
+        notes: "2 min from Tapoco. Gift shop, Tree of Shame (hung with crashed vehicle parts). 318 curves in 11 miles — America’s most famous driving road. ⭐ 4.7",
+        waze: "https://waze.com/ul?ll=35.4668,-83.9195&navigate=yes" },
+      { name: "Patton’s Run Overlook — Nantahala Gorge", icon: "🌊", time: "~11:45 AM · 15 min", lat: 35.2779, lng: -83.681,
+        notes: "Stone steps down to watch whitewater rafters shoot Class II rapids on the Nantahala River. Dramatic gorge walls on both sides. ⭐ 4.8",
+        waze: "https://waze.com/ul?ll=35.2779,-83.681&navigate=yes" },
+      { name: "Pasqualino’s — Bryson City Lunch", icon: "🍽", time: "~12:15 PM · 60 min", lat: 35.4277, lng: -83.4456,
+        notes: "25 Everett St, Bryson City · ⭐ 4.2 · Excellent Italian — giant calzones, great ribeye. Walk the Great Smoky Mountains Railroad depot. Closed Wednesdays (you’re here Saturday).",
+        waze: "https://waze.com/ul?ll=35.4277,-83.4456&navigate=yes", phone: "+1-828-488-9555" },
+      { name: "Sequoyah National Golf Club", icon: "⛳", time: "2:00 PM · 4.5 hrs", lat: 35.4317, lng: -83.3291,
+        notes: "79 Cahon’s Mt Rd, Whittier · ⭐ 4.6 · Top 30 in NC. Bent grass greens, zoysia fairways. Elevation adds 10–15 yards. Play the right tees — the slope is stiff.",
+        waze: "https://waze.com/ul?ll=35.4317,-83.3291&navigate=yes", phone: "+1-828-497-3000" },
+      { name: "Tapoco Lodge — Dinner", icon: "🍽", time: "~7:30 PM", lat: 35.4437, lng: -83.9384,
+        notes: "Back to Tapoco Tavern. Pulled pork sandwich with homemade chips if you had trout last night.",
+        waze: "https://waze.com/ul?ll=35.4437,-83.9384&navigate=yes" }
+    ]
+  },
+  {
+    num: 3,
+    title: "The Long Way Home — Blue Ridge to Jacksonville",
+    meta: "~530 mi · ~9.5–10 hrs driving + stops · Depart 7:00 AM",
+    color: "#7b8fe0",
+    gmapUrl: "https://www.google.com/maps/dir/Tapoco+Lodge,+Robbinsville,+NC/Black+Sheep+Restaurant,+Blue+Ridge,+GA/Dahlonega+Gold+Museum,+Dahlonega,+GA/Public+House+Kitchen,+Dahlonega,+GA/Madison,+GA/Jacksonville,+FL/@33.2,-83.5,7z/data=!4m2!4m1!3e0",
+    stops: [
+      { name: "Tapoco Lodge — Depart", icon: "☕", time: "7:00 AM", lat: 35.4437, lng: -83.9384,
+        notes: "Early departure. Coffee and pastry at the lodge. Morning mist in the mountain valleys — the light is spectacular.",
+        waze: "https://waze.com/ul?ll=35.4437,-83.9384&navigate=yes" },
+      { name: "Black Sheep Restaurant — Blue Ridge Brunch", icon: "🍽", time: "~9:30 AM · 60 min", lat: 34.8633, lng: -84.328,
+        notes: "480 W Main St, Blue Ridge, GA · ⭐ 4.5 · Opens 11 AM Sunday — grab coffee and walk the Scenic Railway depot if early. Legendary lamb lollipops, fork-tender filet.",
+        waze: "https://waze.com/ul?ll=34.8633,-84.328&navigate=yes", phone: "+1-706-946-3663" },
+      { name: "Dahlonega Gold Museum", icon: "🏛", time: "~11:30 AM · 30 min", lat: 34.5327, lng: -83.9848,
+        notes: "America’s first gold rush (1828), 20 years before California. Oldest courthouse in Georgia (1836). Town name from Cherokee ‘talonega’ — golden. Also site of a Confederate-seized U.S. Mint.",
+        waze: "https://waze.com/ul?ll=34.5327,-83.9848&navigate=yes", phone: "+1-706-864-2257" },
+      { name: "Public House Kitchen — Dahlonega Lunch", icon: "🍽", time: "~12:15 PM · 45 min", lat: 34.5463, lng: -83.9925,
+        notes: "1108 N Grove St, Dahlonega · ⭐ 4.6 · Maple Dijon pork ribeye is the standout. Great burgers, craft cocktails.",
+        waze: "https://waze.com/ul?ll=34.5463,-83.9925&navigate=yes", phone: "+1-706-864-0008" },
+      { name: "Madison, GA — The Town Sherman Wouldn’t Burn", icon: "🏛", time: "~3:00 PM · 30 min", lat: 33.5954, lng: -83.4667,
+        notes: "Best antebellum architecture in the South. Coffee at The Sinclair (restored 1930s gas station turned café). 200 years of architecture in a 10-minute stroll.",
+        waze: "https://waze.com/ul?ll=33.5954,-83.4667&navigate=yes" },
+      { name: "Jacksonville, FL — Home", icon: "🏠", time: "~8:00 PM", lat: 30.3322, lng: -81.6557,
+        notes: "Final stretch: US-441 through Milledgeville & Dublin, then I-16 East to I-95 South into Jacksonville.",
+        waze: "https://waze.com/ul?q=Jacksonville%20FL" }
+    ]
+  }
+];
+
+const map = L.map('map', { zoomControl: false }).setView([34.5, -83.8], 7);
+L.control.zoom({ position: 'topleft' }).addTo(map);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/voyager/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap · © CARTO',
+  subdomains: 'abcd', maxZoom: 19
+}).addTo(map);
+
+const dayColors = { 1: '#c97a3a', 2: '#3d8a6b', 3: '#5a6fc4' };
+const markerGroups = {};
+const polylines = {};
+
+function createMarker(stop, dayNum, idx) {
+  const color = dayColors[dayNum];
+  const icon = L.divIcon({
+    className: '',
+    html: '<div style="width:30px;height:30px;border-radius:8px;background:' + color + ';color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,0.4);border:2px solid rgba(255,255,255,0.9);">' + (idx + 1) + '</div>',
+    iconSize: [30, 30], iconAnchor: [15, 15]
+  });
+
+  const marker = L.marker([stop.lat, stop.lng], { icon })
+    .bindPopup(
+      '<div style="font-family:DM Sans,sans-serif;min-width:200px;">' +
+        '<div style="font-size:11px;color:' + color + ';font-weight:700;margin-bottom:2px;">Day ' + dayNum + ' · ' + stop.time + '</div>' +
+        '<div style="font-size:14px;font-weight:700;margin-bottom:6px;">' + stop.icon + ' ' + stop.name + '</div>' +
+        '<div style="font-size:12px;color:#5c5650;line-height:1.5;">' + stop.notes + '</div>' +
+        '<div style="margin-top:8px;"><a href="' + stop.waze + '" target="_blank" style="font-size:11px;color:#33b7ff;text-decoration:none;font-weight:600;">Open in Waze →</a></div>' +
+      '</div>'
+    );
+
+  return marker;
+}
+
+DAYS.forEach(function(day) {
+  var group = L.layerGroup();
+  var coords = [];
+
+  day.stops.forEach(function(stop, idx) {
+    var marker = createMarker(stop, day.num, idx);
+    marker.addTo(group);
+    coords.push([stop.lat, stop.lng]);
+  });
+
+  var polyline = L.polyline(coords, {
+    color: dayColors[day.num],
+    weight: 3,
+    opacity: 0.7,
+    dashArray: '8,6'
+  });
+  polyline.addTo(group);
+
+  markerGroups[day.num] = group;
+  polylines[day.num] = coords;
+});
+
+function renderItinerary(dayNum) {
+  var day = DAYS[dayNum - 1];
+  var container = document.getElementById('itinerary-container');
+  var html =
+    '<div class="day-header">' +
+      '<div class="day-badge day-badge-' + day.num + '">D' + day.num + '</div>' +
+      '<div class="day-title">' + day.title + '</div>' +
+    '</div>' +
+    '<div class="day-meta">' + day.meta + '</div>';
+
+  day.stops.forEach(function(stop, idx) {
+    html +=
+      '<div class="stop-card" onclick="flyToStop(' + stop.lat + ', ' + stop.lng + ')">' +
+        '<div class="stop-top">' +
+          '<div class="stop-icon stop-icon-' + day.num + '">' + stop.icon + '</div>' +
+          '<div class="stop-info">' +
+            '<div class="stop-name">' + stop.name + '</div>' +
+            '<div class="stop-time stop-time-' + day.num + '">' + stop.time + '</div>' +
+            '<div class="stop-notes">' + stop.notes + '</div>' +
+            '<div class="stop-links">' +
+              '<a class="stop-link stop-link-waze" href="' + stop.waze + '" target="_blank" onclick="event.stopPropagation()">' +
+                '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>' +
+                ' Waze</a>' +
+              '<a class="stop-link stop-link-gmaps" href="https://www.google.com/maps/search/?api=1&query=' + stop.lat + ',' + stop.lng + '" target="_blank" onclick="event.stopPropagation()">' +
+                '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>' +
+                ' Maps</a>' +
+              (stop.phone ? '<a class="stop-link stop-link-call" href="tel:' + stop.phone + '" onclick="event.stopPropagation()">📞 Call</a>' : '') +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    if (idx < day.stops.length - 1) {
+      html += '<div class="route-connector"><div class="route-connector-line route-connector-line-' + day.num + '"></div></div>';
+    }
+  });
+
+  container.innerHTML = html;
+}
+
+var activeDay = 1;
+
+function showDay(dayNum) {
+  activeDay = dayNum;
+
+  document.querySelectorAll('.day-tab').forEach(function(tab, i) {
+    tab.className = 'day-tab' + (i + 1 === dayNum ? ' active-' + dayNum : '');
+  });
+
+  Object.values(markerGroups).forEach(function(g) { map.removeLayer(g); });
+  markerGroups[dayNum].addTo(map);
+
+  var bounds = L.latLngBounds(polylines[dayNum]);
+  map.fitBounds(bounds, { padding: [40, 40] });
+
+  document.getElementById('gmap-route-link').href = DAYS[dayNum - 1].gmapUrl;
+
+  renderItinerary(dayNum);
+}
+
+function flyToStop(lat, lng) {
+  map.flyTo([lat, lng], 13, { duration: 1 });
+}
+
+showDay(1);
+</script>
+</body>
+</html>
